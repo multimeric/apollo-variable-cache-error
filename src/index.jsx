@@ -25,7 +25,17 @@ const QueryType = new GraphQLObjectType({
   fields: {
     people: {
       type: new GraphQLList(PersonType),
-      resolve: () => peopleData,
+      resolve: (source, args) => {
+        if (!args.filter){
+          return peopleData;
+        }
+        return peopleData.filter(person => person.name.includes(args.filter));
+      },
+      args: {
+        filter: {
+          type: GraphQLString
+        }
+      }
     },
   },
 });
@@ -93,8 +103,8 @@ import {
 import "./index.css";
 
 const ALL_PEOPLE = gql`
-  query AllPeople {
-    people {
+  query AllPeople($filter: String) {
+    people(filter: $filter)  {
       id
       name
     }
@@ -112,10 +122,14 @@ const ADD_PERSON = gql`
 
 function App() {
   const [name, setName] = useState('');
+  const [filter, setFilter] = useState('');
   const {
     loading,
     data,
-  } = useQuery(ALL_PEOPLE);
+  } = useQuery(ALL_PEOPLE, {
+    variables: { filter },
+    // fetchPolicy: "network-only"
+  });
 
   const [addPerson] = useMutation(ADD_PERSON, {
     update: (cache, { data: { addPerson: addPersonData } }) => {
@@ -158,6 +172,13 @@ function App() {
         </button>
       </div>
       <h2>Names</h2>
+      <label htmlFor="filter">Filter</label>
+      <input
+          type="text"
+          name="filter"
+          value={filter}
+          onChange={evt => setFilter(evt.target.value)}
+      />
       {loading ? (
         <p>Loading…</p>
       ) : (
